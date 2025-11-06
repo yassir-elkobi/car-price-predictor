@@ -1,99 +1,92 @@
-# Car Price Predictor with Linear Regression
+## Car Price Predictor (Flask + scikit-learn)
 
-**Car Price Predictor with Gradient Descent** is a Flask web application that predicts the selling price of a used car
-based on various features. It implements both linear and polynomial regression models *from scratch* using gradient
-descent (instead of relying on scikit-learn for model training). This project is part of my machine learning
-journey, aiming to solidify understanding of regression algorithms, gradient descent optimization, and end-to-end model
-deployment.
+An educational, end-to-end regression project showing how different ML models learn to predict car prices. It includes:
 
-## Features
+- A clean preprocessing pipeline (imputation, scaling, one-hot encoding)
+- Multiple models trained and compared automatically
+- An ensemble (Voting Regressor) to combine models
+- A Flask app with UI to predict prices and view comparison metrics
 
-- **Linear & Polynomial Regression**
-- **Gradient Descent Optimization**
-- **L2 Regularization (Ridge)**
-- **Feature Selection**
-- **Feature Scaling Options**
-- **Cross-Validation and MSE Evaluation**
-- **Visualizations**
-- **Interactive Predictions**
+This repo is intentionally simple and readable to help newcomers (and busy managers) understand how ML fits together.
 
-## Tech Stack and Tools
+### Demo: What happens
 
-- **Python 3**
-- **Flask**
-- **Pandas**
-- **NumPy**
-- **Matplotlib**
-- **scikit-learn (for preprocessing only)**
+1. Data is loaded (your CSV at `data/cars.csv` or a synthetic dataset is generated).
+2. We split into train/test and build a preprocessing pipeline.
+3. We train several models and evaluate them:
+    - Linear Regression
+    - Ridge (L2)
+    - Lasso (L1)
+    - Random Forest
+    - Gradient Boosting
+    - Ensemble (Voting over top performers)
+4. We compute metrics (R², MAE, RMSE) and pick the best model.
+5. The best model is saved to `model.joblib`. A full report is saved to `metrics.json`.
+6. The Flask app serves:
+    - `/` — prediction form
+    - `/compare` — comparison table of models
+    - `/train` — retrain and refresh metrics
+    - `/metrics` — raw JSON of results
 
-## Best Model Configuration
+### Quickstart
 
-Through experimentation, the following configuration was found to produce the best results for this car price prediction
-task:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
-- **Algorithm Type:** Polynomial Regression (Degree = 2).
-- **Regularization:** Enabled L2 regularization (Ridge) with λ = 0.04.
-- **Cross-Validation:** Enabled
-- **Feature Scaling:** Standardization (Z-score normalization of features) was applied.
-- **Gradient Descent Parameters:** Learning Rate α = 0.04, and Number of Iterations = 10,000.
-
-## Dataset Summary
-
-The model is trained on a dataset of used cars (originally provided by
-CarDekho.com. The dataset contains **4,340 rows** (car entries) and **8 columns** of features describing each car, along
-with the
-target selling price. It's a mix of numerical and categorical data. Key features include:
-
-- **Car Age or Year**
-- **Car Brand/Model**
-- **Kms Driven (Mileage)**
-- **Fuel Type:** Petrol, Diesel, CNG, etc
-- **Transmission:** Manual or Automatic
-- **Seller Type:** Whether the car is being sold by a **Dealer** or an **Individual (private seller)**
-- **Owner** (Number of Previous Owners): Indicates if the car is first-hand, second-hand, etc.
-
-The **target** variable is the *Selling_Price* of the car (the price at which the car is being sold in the used car
-market).
-
-## Project Structure
-
-```
-├── app.py                 # Main Flask application
-├── model.py               # Linear & polynomial regression model implementation
-├── preprocessing.py       # Data loading and preprocessing functions
-├── utils.py               # Evaluation metrics and visualization utilities
-├── requirements.txt       # Project dependencies
-├── static/                # Static files (CSS, data files)
-│   └── car_details_from_car_dehkho.csv  # Car dataset
-└── templates/             # HTML templates
-    ├── index.html         # Settings page
-    └── results.html       # Results visualization page
+# Optional: put your dataset at data/cars.csv with target column price/Price/selling_price
+python app.py  # this will train on first run if model is missing
+# Open http://127.0.0.1:5000
 ```
 
-## How to Run the App Locally
+### Using the API
 
-1. **Clone the repository** or download the project source code to your local machine.
-2. **Create a virtual environment:**  
-```  
-python -m venv .venv  
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate  
+- Predict via JSON:
+
+```bash
+curl -X POST http://127.0.0.1:5000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"brand":"Toyota","year":2018,"mileage":65000,"engine_size":1.6}'
 ```
-3. **Install Python dependencies:**  
-```  
-pip install -r requirements.txt  
-```
-4. **Run the Flask application:**  
-```  
-python app.py  
-```
-5. **Open the web app in your browser:** Navigate to <http://127.0.0.1:5000/>
 
-## Learning Goals
+- Compare models (JSON): `GET /metrics`
 
-This project was developed as part of my journey to learn and demonstrate machine learning engineering skills.
-The primary learning goal was to **implement regression models from scratch** and integrate them into a full web
-application.
+### Educational Notes
 
-**Note:** This README is written to be clear and informative for any new visitor (or recruiter) checking out the
-project. It highlights the project's purpose, capabilities, technical implementation, and the learning outcomes
-associated with it.
+- Why multiple models? Each algorithm has different bias/variance trade-offs. We compare them to learn which works best
+  for this data.
+- Why a pipeline? Consistent preprocessing avoids data leakage and keeps code maintainable.
+- What metrics mean:
+    - R²: How much variance we explain (closer to 1 is better)
+    - MAE: Average absolute error in the same units as the price (lower is better)
+    - RMSE: Penalizes large errors more strongly (lower is better)
+- Ensemble: A simple average (Voting Regressor) of strong models often performs as well as or better than the single
+  best model.
+
+### Project Layout
+
+- `app.py` — Flask app (predict, compare, retrain, metrics)
+- `train.py` — training and comparison logic; saves `model.joblib` and `metrics.json`
+- `templates/` — UI pages (`index.html`, `compare.html`)
+- `requirements.txt` — Python dependencies
+
+### Bring Your Own Data
+
+Place a CSV at `data/cars.csv` with a target column named one of:
+
+- `price` (preferred)
+- `Price`
+- `selling_price`
+
+Feature columns can include categorical (e.g., brand) and numeric (e.g., year, mileage, engine_size). The code will
+infer types and handle missing values.
+
+### Reproducibility
+
+We fix `random_state=42` and use a consistent test split (`test_size=0.25`). You can change these in
+`train_and_compare()` in `train.py`.
+
+### License
+
+MIT
